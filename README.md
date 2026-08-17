@@ -49,11 +49,11 @@ python3 --version
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/Hotel_Management_System.git
+git clone https://github.com/noncebamadonsela17-commits
+/Hotel_Management_System.git
 cd Hotel_Management_System
 ```
 
-Replace `<your-username>` with your GitHub username.
 
 ### 2. (Optional) Create a virtual environment
 
