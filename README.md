@@ -49,11 +49,9 @@ python3 --version
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/noncebamadonsela17-commits
-/Hotel_Management_System.git
+git clone https://github.com/noncebamadonsela17-commits/Hotel_Management_System.git
 cd Hotel_Management_System
 ```
-
 
 ### 2. (Optional) Create a virtual environment
 

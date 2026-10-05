@@ -95,6 +95,42 @@ def test_cannot_cancel_after_check_in(system, future_dates):
         system.cancel_booking(booking.booking_id)
 
 
+def test_check_in_refuses_room_already_occupied(system, future_dates):
+    check_in, check_out = future_dates
+    later_out = check_out + timedelta(days=2)
+    first = system.make_booking(
+        "101", "Guest A", "a@example.com", check_in, check_out
+    )
+    second = system.make_booking(
+        "101", "Guest B", "b@example.com", check_out, later_out
+    )
+    _, key = system.check_in(first.booking_id)
+
+    with pytest.raises(ValueError, match="already occupied"):
+        system.check_in(second.booking_id)
+
+    room = system.hotel.get_room("101")
+    assert room.status == RoomStatus.OCCUPIED
+    assert room.room_key is not None
+    assert room.room_key.key_id == key.key_id
+
+
+def test_checkout_includes_charges_added_after_invoice(system, future_dates):
+    check_in, check_out = future_dates
+    booking = system.make_booking(
+        "302", "Late Charge", "late@example.com", check_in, check_out
+    )
+    system.check_in(booking.booking_id)
+    system.request_room_service(booking.booking_id, "Breakfast", 80.0)
+    preview = system.generate_invoice(booking.booking_id)
+
+    system.request_room_service(booking.booking_id, "Laundry", 150.0)
+    invoice = system.check_out(booking.booking_id)
+
+    assert invoice.invoice_id == preview.invoice_id
+    assert invoice.total_amount == booking.room_cost + 230.0
+
+
 def test_housekeeping_marks_available(system):
     system.log_housekeeping(
         "101",

@@ -9,6 +9,7 @@ from hms.models.enums import (
     BookingStatus,
     NotificationType,
     PaymentMethod,
+    PaymentStatus,
     RoomStatus,
     RoomStyle,
 )
@@ -175,6 +176,10 @@ class HotelSystem:
     def check_in(self, booking_id: str) -> tuple[RoomBooking, RoomKey]:
         booking = self._get_booking(booking_id)
         room = self._hotel.get_room(booking.room_number)
+        if booking.booking_status != BookingStatus.CONFIRMED:
+            booking.check_in_guest()
+        if room.status == RoomStatus.OCCUPIED:
+            raise ValueError(f"Room {room.number} is already occupied.")
         if room.status in (RoomStatus.MAINTENANCE, RoomStatus.CLEANING):
             raise ValueError(
                 f"Room {room.number} is not ready ({room.status.value})."
@@ -225,19 +230,29 @@ class HotelSystem:
         self.save()
         return charge
 
+    def _lines_for_booking(self, booking: RoomBooking) -> list[tuple[str, float]]:
+        lines = [
+            (
+                f"Room {booking.room_number} × {booking.nights} night(s)",
+                booking.room_cost,
+            )
+        ]
+        for charge in booking.charges:
+            lines.append((charge.description, charge.amount))
+        return lines
+
     def generate_invoice(self, booking_id: str) -> Invoice:
         booking = self._get_booking(booking_id)
+        lines = self._lines_for_booking(booking)
         for inv in self._invoices.values():
             if inv.booking_id == booking_id:
+                if inv.payment_status != PaymentStatus.PAID:
+                    inv.set_line_items(lines)
+                    self.save()
                 return inv
 
         invoice = Invoice(booking.booking_id, booking.guest_email)
-        invoice.add_line_item(
-            f"Room {booking.room_number} × {booking.nights} night(s)",
-            booking.room_cost,
-        )
-        for charge in booking.charges:
-            invoice.add_room_charge(charge)
+        invoice.set_line_items(lines)
         self._invoices[invoice.invoice_id] = invoice
         self._send_notification(
             booking.guest_email,

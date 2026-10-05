@@ -77,6 +77,11 @@ class Invoice:
         invoice._paid_at = paid_at
         return invoice
 
+    def set_line_items(self, items: list[tuple[str, float]]) -> None:
+        if self._payment_status == PaymentStatus.PAID:
+            raise ValueError("Cannot modify a paid invoice.")
+        self._line_items = [(description, round(amount, 2)) for description, amount in items]
+
     def add_line_item(self, description: str, amount: float) -> None:
         if self._payment_status == PaymentStatus.PAID:
             raise ValueError("Cannot modify a paid invoice.")
